@@ -1,0 +1,10 @@
+Ако фронтенд страницата е на друг порт или адрес (например Django е на http://localhost:8000, а HTML файлът - от файлова система или друго място), трябва да разрешиш CORS.
+
+Инсталирай пакет:
+pip install django-cors-headers
+Добави 'corsheaders' в INSTALLED_APPS
+И 'corsheaders.middleware.CorsMiddleware' най-отгоре в MIDDLEWARE.
+
+В settings.py добави:
+
+CORS_ALLOW_ALL_ORIGINS = True  # За тестове; за продукция конкретизирай allowed origins!
