@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <title>Записване за курсове</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body { font-family: Arial; max-width: 420px; margin: 30px auto;}
+    form label { display: block; margin: 12px 0 4px }
+    input, select { width: 100%; padding: 6px; margin-bottom: 10px; }
+    button { padding: 8px 14px; background: #48c; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+    button:disabled { background: #ccc; }
+    .message { margin-top: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const server_addr= 'http://localhost:8000'
+    const { createApp, ref, onMounted } = Vue;
+    createApp({
+      setup() {
+        const form = ref({
+          child_name: "",
+          child_age: "",
+          phone: "",
+          email: "",
+          course: ""
+        });
+        const courses = ref([]);
+        const message = ref("");
+        const loading = ref(false);
+
+        onMounted(() => {
+          // Ако Django API-то ти е на /api/courses/
+          axios.get("http://127.0.0.1:8000/courses/")
+            .then(res => { courses.value = res.data; })
+            .catch(() => { message.value = "Грешка при зареждане на курсовете!"; });
+        });
+
+        function submitForm() {
+          loading.value = true;
+          message.value = "";
+          axios.post("server_addr+/registrations/", form.value)
+            .then(() => {
+              message.value = "Успешна регистрация!";
+              // Нулирай формата
+              form.value = { child_name: "", child_age: "", phone: "", email: "", course: "" };
+            })
+            .catch(err => {
+              if (err.response && err.response.data) {
+                // non_field_errors е ако сме върнали такава в DRF Serialization
+                message.value = err.response.data.non_field_errors
+                  ? err.response.data.non_field_errors[0]
+                  : "Грешка при регистрацията!";
+              } else {
+                message.value = "Грешка при регистрацията!";
+              }
+            })
+            .finally(() => { loading.value = false; });
+        }
+
+        return { form, courses, message, loading, submitForm };
+      },
+      template: `
+        <h2>Запиши се за курс</h2>
+        <form @submit.prevent="submitForm">
+          <label>Име на дете:
+            <input v-model="form.child_name" required>
+          </label>
+          <label>Възраст:
+            <input v-model="form.child_age" type="number" min="3" max="18" required>
+          </label>
+          <label>Телефон:
+            <input v-model="form.phone" required>
+          </label>
+          <label>Имейл:
+            <input v-model="form.email" type="email" required>
+          </label>
+          <label>Избери курс:
+            <select v-model="form.course" required>
+              <option value="" disabled selected>Избери...</option>
+              <option v-for="course in courses" :key="course.id" :value="course.id">
+                {{ course.subject }} (Свободни места: {{ course.available_places }})
+              </option>
+            </select>
+          </label>
+          <button type="submit" :disabled="loading">Изпрати заявка</button>
+        </form>
+        <div class="message" v-if="message">{{ message }}</div>
+      `
+    }).mount('#app');
+  </script>
+</body>
+</html>
